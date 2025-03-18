@@ -15,7 +15,7 @@ export default async function Navbar() {
     <nav className="w-full border-b border-gray-200 bg-white py-2">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <Link href="/" prefetch className="text-xl font-bold flex items-center">
-          <span className="bg-white ">QEEM</span>
+          <span className="bg-white ">QEEM1</span>
         </Link>
         <div className="hidden md:flex gap-6 items-center">
           <Link

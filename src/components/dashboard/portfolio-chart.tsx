@@ -16,6 +16,13 @@ export default function PortfolioChart({
   className = "",
 }: PortfolioChartProps) {
   const [timeframe, setTimeframe] = useState("1m");
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    date: Date;
+    value: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
   // Add support for more timeframes
   const timeframeMap = {
     "1d": 1,
@@ -29,6 +36,7 @@ export default function PortfolioChart({
     all: 730,
   };
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
   const netWorth = totalAssets - totalLiabilities;
 
   // Generate sample historical data based on current values
@@ -130,7 +138,7 @@ export default function PortfolioChart({
     }
 
     // Style the line
-    ctx.strokeStyle = "#f59e0b"; // Amber/Orange color
+    ctx.strokeStyle = "#000000"; // Black line as requested
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -138,7 +146,7 @@ export default function PortfolioChart({
     ctx.lineTo(width, height);
     ctx.lineTo(0, height);
     ctx.closePath();
-    ctx.fillStyle = "rgba(245, 158, 11, 0.1)"; // Light amber
+    ctx.fillStyle = "rgba(128, 128, 128, 0.1)"; // Light gray as requested
     ctx.fill();
 
     // Add date markers
@@ -153,7 +161,62 @@ export default function PortfolioChart({
       const date = data[index].date;
       ctx.fillText(date.toLocaleDateString("fr-FR"), x, height - 5);
     }
+
+    // Store the data and scaling for hover interactions
+    canvas.dataset.chartData = JSON.stringify({
+      data,
+      xScale,
+      yScale,
+      minValue,
+      height,
+    });
   }, [timeframe, netWorth, totalAssets, totalLiabilities]);
+
+  // Handle mouse movement for interactive tooltip
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Get chart data from dataset
+      const chartDataStr = canvas.dataset.chartData;
+      if (!chartDataStr) return;
+
+      const chartData = JSON.parse(chartDataStr);
+      const { data, xScale, yScale, minValue, height } = chartData;
+
+      // Find the closest data point
+      const index = Math.min(
+        Math.max(0, Math.round(x / xScale)),
+        data.length - 1,
+      );
+      const dataPoint = data[index];
+      const pointY = height - (dataPoint.value - minValue) * yScale;
+
+      setHoveredPoint({
+        date: new Date(dataPoint.date),
+        value: dataPoint.value,
+        x: index * xScale,
+        y: pointY,
+      });
+    };
+
+    const handleMouseLeave = () => {
+      setHoveredPoint(null);
+    };
+
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [timeframe]);
 
   // Calculate growth percentage
   const historicalData = generateHistoricalData();
@@ -163,15 +226,22 @@ export default function PortfolioChart({
     startingValue > 0 ? (growthAmount / startingValue) * 100 : 0;
 
   return (
-    <Card className={className}>
+    <Card
+      className={
+        className +
+        " h-full border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+      }
+    >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>Net Worth</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+            <CardTitle className="text-xl font-semibold text-gray-800">
+              Net Worth
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
               {new Date().toLocaleDateString("fr-FR")}
             </p>
-            <p className="text-3xl font-bold mt-2">
+            <p className="text-3xl font-bold mt-2 text-gray-900">
               {new Intl.NumberFormat("fr-FR", {
                 style: "currency",
                 currency: "EUR",
@@ -185,13 +255,43 @@ export default function PortfolioChart({
             onValueChange={setTimeframe}
             className="w-auto"
           >
-            <TabsList className="grid grid-cols-6 w-[300px]">
-              <TabsTrigger value="1d">1D</TabsTrigger>
-              <TabsTrigger value="7d">7D</TabsTrigger>
-              <TabsTrigger value="1m">1M</TabsTrigger>
-              <TabsTrigger value="ytd">YTD</TabsTrigger>
-              <TabsTrigger value="1y">1Y</TabsTrigger>
-              <TabsTrigger value="all">ALL</TabsTrigger>
+            <TabsList className="grid grid-cols-6 w-[300px] bg-gray-100 p-1 rounded-lg">
+              <TabsTrigger
+                value="1d"
+                className="rounded-md data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                1D
+              </TabsTrigger>
+              <TabsTrigger
+                value="7d"
+                className="rounded-md data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                7D
+              </TabsTrigger>
+              <TabsTrigger
+                value="1m"
+                className="rounded-md data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                1M
+              </TabsTrigger>
+              <TabsTrigger
+                value="ytd"
+                className="rounded-md data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                YTD
+              </TabsTrigger>
+              <TabsTrigger
+                value="1y"
+                className="rounded-md data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                1Y
+              </TabsTrigger>
+              <TabsTrigger
+                value="all"
+                className="rounded-md data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm"
+              >
+                ALL
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -199,16 +299,58 @@ export default function PortfolioChart({
       <CardContent>
         {netWorth > 0 ? (
           <>
-            <canvas
-              ref={canvasRef}
-              width={1000}
-              height={300}
-              className="w-full h-auto"
-            />
-            <div className="flex justify-between mt-4 text-sm">
+            <div ref={chartContainerRef} className="relative">
+              <canvas
+                ref={canvasRef}
+                width={1000}
+                height={300}
+                className="w-full h-auto"
+              />
+              {hoveredPoint && (
+                <div
+                  className="absolute pointer-events-none bg-white p-3 rounded-lg shadow-lg border border-gray-100 z-10"
+                  style={{
+                    left: `${hoveredPoint.x}px`,
+                    top: `${hoveredPoint.y}px`,
+                    transform: "translate(-50%, -100%)",
+                  }}
+                >
+                  <div className="text-sm font-medium">
+                    {hoveredPoint.date.toLocaleDateString("fr-FR")}
+                  </div>
+                  <div className="text-sm font-bold">
+                    {new Intl.NumberFormat("fr-FR", {
+                      style: "currency",
+                      currency: "EUR",
+                      maximumFractionDigits: 0,
+                    }).format(hoveredPoint.value)}
+                  </div>
+                </div>
+              )}
+              {hoveredPoint && (
+                <div
+                  className="absolute pointer-events-none w-px h-full bg-gray-300 z-5"
+                  style={{
+                    left: `${hoveredPoint.x}px`,
+                    top: "0",
+                  }}
+                ></div>
+              )}
+              {hoveredPoint && (
+                <div
+                  className="absolute pointer-events-none w-3 h-3 rounded-full bg-primary border-2 border-white z-10"
+                  style={{
+                    left: `${hoveredPoint.x}px`,
+                    top: `${hoveredPoint.y}px`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                ></div>
+              )}
+            </div>
+            <div className="flex justify-between mt-6 text-sm pt-4 border-t border-gray-100">
               <div>
-                <p className="text-muted-foreground">Starting Value</p>
-                <p className="font-medium">
+                <p className="text-gray-500 font-medium">Starting Value</p>
+                <p className="font-semibold text-gray-800 mt-1">
                   {new Intl.NumberFormat("fr-FR", {
                     style: "currency",
                     currency: "EUR",
@@ -217,8 +359,8 @@ export default function PortfolioChart({
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Current Net Worth</p>
-                <p className="font-medium">
+                <p className="text-gray-500 font-medium">Current Net Worth</p>
+                <p className="font-semibold text-gray-800 mt-1">
                   {new Intl.NumberFormat("fr-FR", {
                     style: "currency",
                     currency: "EUR",
@@ -227,9 +369,9 @@ export default function PortfolioChart({
                 </p>
               </div>
               <div>
-                <p className="text-muted-foreground">Growth</p>
+                <p className="text-gray-500 font-medium">Growth</p>
                 <p
-                  className={`font-medium ${growthAmount >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`font-semibold mt-1 ${growthAmount >= 0 ? "text-emerald-600" : "text-rose-600"}`}
                 >
                   {growthAmount >= 0 ? "+" : ""}
                   {new Intl.NumberFormat("fr-FR", {

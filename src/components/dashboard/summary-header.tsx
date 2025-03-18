@@ -34,10 +34,12 @@ export default function SummaryHeader({
         <CardContent className="p-6">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
+              <p className="text-sm text-muted-foreground mb-1 flex font-black">
                 Net Worth
               </p>
-              <h2 className="text-3xl font-bold">{formatCurrency(netWorth)}</h2>
+              <h2 className="text-3xl font-bold text-[#0f0f0f]">
+                {formatCurrency(netWorth)}
+              </h2>
               <div
                 className={`flex items-center mt-2 ${isPositiveChange ? "text-green-600" : "text-red-600"}`}
               >
@@ -62,7 +64,6 @@ export default function SummaryHeader({
           </div>
         </CardContent>
       </Card>
-
       {/* Assets Card */}
       <Card className="bg-white">
         <CardContent className="p-6">
@@ -88,7 +89,6 @@ export default function SummaryHeader({
           </div>
         </CardContent>
       </Card>
-
       {/* Allocation Card */}
       <Card className="bg-white">
         <CardContent className="p-6">

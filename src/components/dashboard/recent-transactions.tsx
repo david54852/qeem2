@@ -65,12 +65,14 @@ export default function RecentTransactions({
   };
 
   return (
-    <Card>
+    <Card className="border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 bg-white">
       <CardHeader>
-        <CardTitle>Recent Changes</CardTitle>
+        <CardTitle className="text-xl font-semibold text-gray-800">
+          Recent Changes
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-5">
           {displayTransactions.map((transaction) => (
             <div
               key={transaction.id}
@@ -78,27 +80,29 @@ export default function RecentTransactions({
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`p-2 rounded-full ${transaction.type === "increase" ? "bg-green-100" : "bg-red-100"}`}
+                  className={`p-2.5 rounded-full ${transaction.type === "increase" ? "bg-emerald-100" : "bg-rose-100"}`}
                 >
                   {transaction.type === "increase" ? (
                     <ArrowUpRight
-                      className={`h-4 w-4 ${transaction.type === "increase" ? "text-green-600" : "text-red-600"}`}
+                      className={`h-4 w-4 ${transaction.type === "increase" ? "text-emerald-600" : "text-rose-600"}`}
                     />
                   ) : (
                     <ArrowDownRight
-                      className={`h-4 w-4 ${transaction.type === "increase" ? "text-green-600" : "text-red-600"}`}
+                      className={`h-4 w-4 ${transaction.type === "increase" ? "text-emerald-600" : "text-rose-600"}`}
                     />
                   )}
                 </div>
                 <div>
-                  <p className="font-medium">{transaction.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-medium text-gray-800">
+                    {transaction.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
                     {transaction.category} • {transaction.date}
                   </p>
                 </div>
               </div>
               <div
-                className={`font-medium ${transaction.type === "increase" ? "text-green-600" : "text-red-600"}`}
+                className={`font-medium ${transaction.type === "increase" ? "text-emerald-600" : "text-rose-600"}`}
               >
                 {transaction.type === "increase" ? "+" : "-"}
                 {formatCurrency(transaction.amount)}

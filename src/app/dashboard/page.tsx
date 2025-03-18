@@ -51,7 +51,7 @@ export default async function Dashboard() {
   const netWorth = totalAssets - totalLiabilities;
 
   // Group assets by category
-  const assetsByCategory = {};
+  const assetsByCategory: Record<string, any[]> = {};
   if (assets) {
     assets.forEach((asset) => {
       const categorySlug = asset.asset_categories?.slug || "uncategorized";
@@ -80,11 +80,13 @@ export default async function Dashboard() {
       <DashboardNavbar />
       <div className="flex">
         <Sidebar />
-        <main className="w-full bg-gray-50 min-h-screen pl-64">
-          <div className="container mx-auto px-4 py-8 flex flex-col gap-8">
+        <main className="w-full bg-white min-h-screen pl-64">
+          <div className="container mx-auto px-6 py-10 flex flex-col gap-8">
             {/* Header Section */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h1 className="text-3xl font-normal">HI,</h1>
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
+              <h1 className="text-3xl font-semibold text-gray-800">
+                Welcome back
+              </h1>
               <AddAssetButton />
             </header>
 
@@ -98,22 +100,27 @@ export default async function Dashboard() {
             />
 
             {/* Charts Section */}
-            <div className="flex flex-col gap-6">
-              <div className="w-full">
+            <div className="flex flex-row gap-6">
+              <div className="w-2/3 flex bg-white">
                 <PortfolioChart
                   totalAssets={totalAssets}
                   totalLiabilities={totalLiabilities}
-                  className="h-4/5 w-9/12"
+                  className="h-full w-full"
                 />
               </div>
-              <div className="w-full flex flex-col">
-                <AssetAllocationChart assets={assets} className="w-5/12" />
+              <div className="w-1/3 bg-white">
+                <AssetAllocationChart
+                  assets={assets}
+                  className="h-full w-full"
+                />
               </div>
             </div>
 
             {/* Asset Categories Section */}
-            <h2 className="text-xl font-semibold mt-4">Asset Categories</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <h2 className="text-xl font-semibold text-gray-800 mt-6 mb-2">
+              Asset Categories
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               <AssetCategoryWidgetClient
                 title="Cash"
                 iconName="DollarSign"
@@ -143,6 +150,13 @@ export default async function Dashboard() {
                 changePercentage={-2.1}
               />
               <AssetCategoryWidgetClient
+                title="Precious Metals"
+                iconName="Database"
+                totalValue={getCategoryTotal("precious-metals")}
+                assetCount={getCategoryAssetCount("precious-metals")}
+                changePercentage={1.2}
+              />
+              <AssetCategoryWidgetClient
                 title="Debt"
                 iconName="CreditCard"
                 totalValue={getCategoryTotal("debt")}
@@ -152,7 +166,9 @@ export default async function Dashboard() {
             </div>
 
             {/* Recent Transactions */}
-            <h2 className="text-xl font-semibold mt-4">Recent Activity</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mt-6 mb-2">
+              Recent Activity
+            </h2>
             <RecentTransactions />
           </div>
         </main>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AssetAllocationTreemap from "./asset-allocation-treemap";
 
 interface AssetAllocationChartProps {
-  assets?: any[];
+  assets?: any[] | null;
   className?: string;
 }
 
@@ -52,12 +52,19 @@ export default function AssetAllocationChart({
   const assetData = processAssetData();
 
   return (
-    <Card className={className + " flex  flex-col"}>
+    <Card
+      className={
+        className +
+        " flex flex-col h-full border-0 rounded-xl shadow-sm hover:shadow-md transition-all duration-300"
+      }
+    >
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Distribution</CardTitle>
+          <CardTitle className="text-xl font-semibold text-gray-800">
+            Distribution
+          </CardTitle>
           <div className="flex gap-2">
-            <button className="p-2 bg-gray-100 rounded-md hover:bg-gray-200">
+            <button className="p-2 bg-gray-100 rounded-md hover:bg-primary/10 hover:text-primary transition-all duration-200">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -75,7 +82,7 @@ export default function AssetAllocationChart({
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
             </button>
-            <button className="p-2 bg-gray-100 rounded-md hover:bg-gray-200">
+            <button className="p-2 bg-gray-100 rounded-md hover:bg-primary/10 hover:text-primary transition-all duration-200">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -92,7 +99,7 @@ export default function AssetAllocationChart({
                 <path d="M12 12 16 16"></path>
               </svg>
             </button>
-            <button className="p-2 bg-gray-100 rounded-md hover:bg-gray-200">
+            <button className="p-2 bg-gray-100 rounded-md hover:bg-primary/10 hover:text-primary transition-all duration-200">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"

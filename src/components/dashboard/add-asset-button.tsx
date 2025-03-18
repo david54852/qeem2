@@ -23,11 +23,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StockSearch from "./stock-search";
 import CryptoSearch from "./crypto-search";
+import ConnectCryptoBroker from "./connect-crypto-broker";
+import BrokerSelection from "./broker-selection";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddAssetForm from "./add-asset-form";
+import AddMetalForm from "./add-metal-form";
+import CarSearch from "./car-search";
 import { createClient } from "../../../supabase/client";
 
 export default function AddAssetButton() {
@@ -38,6 +42,7 @@ export default function AddAssetButton() {
   const [activeTab, setActiveTab] = useState("cash");
   const [selectedAssetType, setSelectedAssetType] = useState("");
   const [isLinking, setIsLinking] = useState(false);
+  const [userId, setUserId] = useState("");
 
   const handleClose = () => {
     setOpen(false);
@@ -45,6 +50,9 @@ export default function AddAssetButton() {
     setShowStocksOptions(false);
     setShowStockSearch(false);
     setShowCryptoSearch(false);
+    setShowBrokerSelection(false);
+    setShowMetalsForm(false);
+    setShowCarSearch(false);
   };
 
   const handleAssetTypeSelect = (type: string) => {
@@ -56,6 +64,14 @@ export default function AddAssetButton() {
     } else if (type === "crypto") {
       setShowStocksOptions(true); // Reuse the same options UI
       setShowAssetTypes(false);
+    } else if (type === "metals") {
+      setShowStocksOptions(false);
+      setShowAssetTypes(false);
+      setShowMetalsForm(true);
+    } else if (type === "cars") {
+      setShowStocksOptions(false);
+      setShowAssetTypes(false);
+      setShowCarSearch(true);
     } else {
       setShowStocksOptions(false);
       setShowAssetTypes(false);
@@ -68,8 +84,6 @@ export default function AddAssetButton() {
         case "cash":
           setActiveTab("cash");
           break;
-        case "cars":
-        case "metals":
         case "domains":
         case "manually":
         default:
@@ -82,6 +96,31 @@ export default function AddAssetButton() {
 
   const [showStockSearch, setShowStockSearch] = useState(false);
   const [showCryptoSearch, setShowCryptoSearch] = useState(false);
+  const [showMetalsForm, setShowMetalsForm] = useState(false);
+  const [showCarSearch, setShowCarSearch] = useState(false);
+
+  const [showBrokerSelection, setShowBrokerSelection] = useState(false);
+  const [showSnapTradeBrokerSelection, setShowSnapTradeBrokerSelection] =
+    useState(false);
+  const [selectedBrokerType, setSelectedBrokerType] = useState("");
+
+  // Get current user ID on component mount
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    };
+
+    fetchUserId();
+  }, [supabase.auth]);
 
   const handleStocksOptionSelect = async (option: string) => {
     setShowStocksOptions(false);
@@ -102,24 +141,15 @@ export default function AddAssetButton() {
           throw new Error("User not authenticated");
         }
 
-        // Show loading state
-        setIsLinking(true);
-
-        console.log("Starting SnapTrade linking process for user:", user.id);
-
-        // Import dynamically to avoid server-side issues
-        const { createSnapTradeUserLink } = await import("@/utils/snaptrade");
-
-        // Create a link for the user
-        const origin = window.location.origin;
-        console.log("Using origin for redirect:", origin);
-
-        const redirectUri = await createSnapTradeUserLink(user.id, origin);
-
-        console.log("Received redirect URI:", redirectUri);
-
-        // Redirect to SnapTrade
-        window.location.href = redirectUri;
+        if (selectedAssetType === "crypto") {
+          // For crypto, show broker selection dialog
+          setShowBrokerSelection(true);
+          setIsLinking(false);
+        } else {
+          // For stocks, show broker selection first
+          setSelectedBrokerType("stocks");
+          setShowSnapTradeBrokerSelection(true);
+        }
       } catch (error) {
         console.error("Error linking account:", error);
         const errorMessage =
@@ -153,6 +183,16 @@ export default function AddAssetButton() {
     window.location.href = "/dashboard/assets";
   };
 
+  const handleCarSelect = (car: any, value: number) => {
+    // The car has been saved to the database in the CarSearch component
+    // Now we just need to close the dialog and potentially refresh the page
+    setShowCarSearch(false);
+    handleClose();
+
+    // Refresh the page to show the newly added car
+    window.location.href = "/dashboard/assets";
+  };
+
   const assetTypes = [
     {
       id: "stocks",
@@ -180,7 +220,7 @@ export default function AddAssetButton() {
     },
     {
       id: "metals",
-      name: "Metals",
+      name: "Precious Metals",
       icon: <Database className="h-6 w-6" />,
       color: "bg-amber-100 text-amber-600 hover:bg-amber-200",
     },
@@ -282,7 +322,28 @@ export default function AddAssetButton() {
                 <button
                   key={option.id}
                   className={`flex items-center p-6 rounded-lg border transition-colors ${option.color}`}
-                  onClick={() => handleStocksOptionSelect(option.id)}
+                  onClick={() => {
+                    if (
+                      option.id === "link" &&
+                      (!process.env.NEXT_PUBLIC_SNAPTRADE_CLIENT_ID ||
+                        !process.env.NEXT_PUBLIC_SNAPTRADE_CONSUMER_KEY)
+                    ) {
+                      console.log("SnapTrade credentials check:", {
+                        clientId: process.env.NEXT_PUBLIC_SNAPTRADE_CLIENT_ID
+                          ? "Set"
+                          : "Not set",
+                        consumerKey: process.env
+                          .NEXT_PUBLIC_SNAPTRADE_CONSUMER_KEY
+                          ? "Set"
+                          : "Not set",
+                      });
+                      alert(
+                        "SnapTrade API credentials are not configured. Please contact the administrator.",
+                      );
+                      return;
+                    }
+                    handleStocksOptionSelect(option.id);
+                  }}
                   disabled={isLinking && option.id === "link"}
                 >
                   <div className="p-3 rounded-full bg-white mr-4">
@@ -364,10 +425,125 @@ export default function AddAssetButton() {
           </>
         )}
 
+        {showBrokerSelection && (
+          <>
+            <ConnectCryptoBroker
+              onBack={() => {
+                setShowBrokerSelection(false);
+                setShowStocksOptions(true);
+              }}
+              userId={userId}
+            />
+          </>
+        )}
+
+        {showSnapTradeBrokerSelection && (
+          <>
+            <BrokerSelection
+              onBack={() => {
+                setShowSnapTradeBrokerSelection(false);
+                setShowStocksOptions(true);
+              }}
+              onSelect={(brokerId) => {
+                setShowSnapTradeBrokerSelection(false);
+                setIsLinking(true);
+
+                // Import dynamically to avoid server-side issues
+                import("@/utils/snaptrade").then(
+                  ({ createSnapTradeUserLink }) => {
+                    // Create a link for the user
+                    const origin = window.location.origin;
+                    const callbackUrl = `${origin}/api/snaptrade/callback?userId=${userId}`;
+
+                    createSnapTradeUserLink(userId, callbackUrl, brokerId)
+                      .then((redirectUri) => {
+                        // Redirect to SnapTrade
+                        window.location.href = redirectUri;
+                      })
+                      .catch((error) => {
+                        console.error("Error connecting to broker:", error);
+                        const errorMessage =
+                          error instanceof Error
+                            ? error.message
+                            : "Unknown error";
+                        alert(
+                          `Failed to link account: ${errorMessage}. Please try again.`,
+                        );
+                        setIsLinking(false);
+                        setShowStocksOptions(true);
+                      });
+                  },
+                );
+              }}
+            />
+          </>
+        )}
+
+        {showMetalsForm && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>Add Precious Metals</DialogTitle>
+                  <DialogDescription>
+                    Add precious metals to your portfolio
+                  </DialogDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowMetalsForm(false);
+                    setShowAssetTypes(true);
+                  }}
+                >
+                  Back to Types
+                </Button>
+              </div>
+            </DialogHeader>
+
+            <div className="mt-4">
+              <AddMetalForm onSuccess={handleClose} />
+            </div>
+          </>
+        )}
+
+        {showCarSearch && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>Add Vehicle</DialogTitle>
+                  <DialogDescription>
+                    Search for vehicle pricing and add to your portfolio
+                  </DialogDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowCarSearch(false);
+                    setShowAssetTypes(true);
+                  }}
+                >
+                  Back to Types
+                </Button>
+              </div>
+            </DialogHeader>
+
+            <div className="mt-4">
+              <CarSearch onCarSelect={handleCarSelect} />
+            </div>
+          </>
+        )}
+
         {!showAssetTypes &&
           !showStocksOptions &&
           !showStockSearch &&
-          !showCryptoSearch && (
+          !showCryptoSearch &&
+          !showBrokerSelection &&
+          !showMetalsForm &&
+          !showCarSearch && (
             <>
               <DialogHeader>
                 <div className="flex items-center justify-between">

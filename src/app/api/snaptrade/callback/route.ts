@@ -1,6 +1,9 @@
 import { createClient } from "../../../../../supabase/server";
 import { NextResponse } from "next/server";
-import { fetchSnapTradeHoldings } from "@/utils/snaptrade";
+import {
+  fetchSnapTradeHoldings,
+  handleSnapTradeCallback,
+} from "@/utils/snaptrade";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -29,8 +32,10 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!success) {
-    console.log("Success parameter is not true, redirecting with error");
+  if (!success && !code) {
+    console.log(
+      "Success parameter is not true and no code, redirecting with error",
+    );
     return NextResponse.redirect(
       new URL("/dashboard/assets?error=connection_failed", requestUrl.origin),
     );
@@ -62,6 +67,31 @@ export async function GET(request: Request) {
         callbackUserId: userId,
       });
       throw new Error("User mismatch");
+    }
+
+    // If we have a code, process it with the SnapTrade API
+    if (code) {
+      console.log("Processing code from SnapTrade callback");
+      const callbackResult = await handleSnapTradeCallback(userId, code);
+      console.log("SnapTrade callback processed:", callbackResult);
+
+      if (callbackResult.success) {
+        // Store the connection in the database
+        const { error: connectionError } = await supabase
+          .from("broker_connections")
+          .insert({
+            user_id: userId,
+            broker_id: "snaptrade",
+            api_key: "snaptrade_connection",
+            api_secret_encrypted: "snaptrade_connection",
+            broker_data: { connected_at: new Date().toISOString() },
+          });
+
+        if (connectionError) {
+          console.error("Error saving connection:", connectionError);
+          throw new Error(`Connection error: ${connectionError.message}`);
+        }
+      }
     }
 
     console.log("User verified, fetching holdings from SnapTrade");
@@ -98,20 +128,23 @@ export async function GET(request: Request) {
         name: holding.name,
         value: holding.totalValue,
         description: `${holding.quantity} shares of ${holding.symbol}`,
-        location: "SnapTrade",
+        location: holding.brokerName || "SnapTrade",
         acquisition_date: new Date().toISOString(),
-        acquisition_value: holding.totalValue - holding.gainLoss,
+        acquisition_value: holding.purchasePrice * holding.quantity,
         category_id: categoryData.id,
         is_liability: false,
         user_id: user.id,
         metadata: {
           symbol: holding.symbol,
           price_per_share: holding.pricePerShare,
+          purchase_price: holding.purchasePrice,
           quantity: holding.quantity,
           currency: "USD",
-          asset_type: "stock",
+          asset_type: holding.symbol === "CASH" ? "cash" : "stock",
           source: "snaptrade",
-          account_id: accountId,
+          account_id: holding.accountId || accountId || "default",
+          account_name: holding.accountName || "Investment Account",
+          broker_name: holding.brokerName || "SnapTrade",
         },
       });
 
